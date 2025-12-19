@@ -38,3 +38,16 @@ async def delete_product(pk: str):
     if Product.delete(pk):
         return {"message": "Successfully deleted"}
     raise HTTPException(status_code=404, detail="Product not found")
+
+# Route for the checkout service to complete order
+@prod_router.post("/{pk}/decrement")
+async def decrement_stock(pk: str, quantity: int):
+    try:
+        product = Product.get(pk)
+        if product.quantity < quantity:
+            raise HTTPException(status_code=400, detail="Insufficient stock")
+
+        product.quantity -= quantity
+        return product.save()
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Product not found")
