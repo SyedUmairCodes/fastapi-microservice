@@ -1,0 +1,43 @@
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    # Add a healthcheck so the API waits until Redis is truly ready
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  inventory:
+    build: ./inventory
+    container_name: inventory
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    # Ensure Redis is healthy before starting the API
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - ./inventory:/app
+    # OVERRIDE the Dockerfile command for development hot-reloading
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis-data:
